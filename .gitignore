@@ -1,0 +1,26 @@
+# Environment & secrets — NEVER commit these
+.env
+*.env
+
+# Resume — personal file, keep local
+resume.pdf
+*.pdf
+
+# Generated data — keep local, not in repo
+leads.csv
+*.log
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+
+# Python env
+venv/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Claude Code skills — local tooling only
+skills/
