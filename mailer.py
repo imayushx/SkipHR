@@ -62,24 +62,29 @@ def generate_email(name: str, company: str, role: str, context: str) -> dict:
     client = Groq(api_key=GROQ_API_KEY)
 
     prompt = f"""
-You are writing a cold email from a job seeker to a recruiter or founder.
-Write a SHORT, direct, human-sounding cold email. No fluff, no corporate speak.
-DO NOT use bullet points. Max 4 sentences in the body.
+You are Ayush. Write a cold email to a founder or hiring person. This must read like a real human wrote it — not a cover letter, not AI slop.
 
-Sender profile:
+Rules:
+- 3 sentences MAX in the body. Short. Direct. No fluff.
+- Do NOT use phrases like: "I came across", "I am reaching out", "I believe", "I am excited", "strong believer", "potential fit", "contributing to", "impressed by your work"
+- Write like you actually know what the company does. Reference something specific from the context.
+- The subject line should be plain and specific, not salesy (e.g. "Quick question" or "Trading infra engineer — Ayush")
+- Sign-off format MUST be exactly:
+  Best,
+  Ayush
+  (on two separate lines, with a blank line before "Best,")
+
+Sender (you):
 {YOUR_PROFILE}
 
-Target:
+Recipient:
 - Name: {name}
 - Company: {company}
-- Role they hire for / their role: {role}
-- Context / why reaching out: {context}
+- Their role: {role}
+- Why reaching out: {context}
 
-Return ONLY a JSON object with two keys:
-- "subject": the email subject line (concise, not salesy)
-- "body": the full email body (plain text, include a greeting and sign-off — the sender's name is Ayush, always sign off as "Ayush")
-
-No markdown, no explanation, just the raw JSON.
+Return ONLY a raw JSON object with keys "subject" and "body". No markdown, no explanation.
+The "body" value must use actual newline characters (\\n) for line breaks — especially before the sign-off.
 """
 
     response = client.chat.completions.create(
