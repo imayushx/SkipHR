@@ -77,13 +77,13 @@ Target:
 
 Return ONLY a JSON object with two keys:
 - "subject": the email subject line (concise, not salesy)
-- "body": the full email body (plain text, include a greeting and sign-off with sender's first name)
+- "body": the full email body (plain text, include a greeting and sign-off — the sender's name is Ayush, always sign off as "Ayush")
 
 No markdown, no explanation, just the raw JSON.
 """
 
     response = client.chat.completions.create(
-        model="llama3-8b-8192",   # Free, fast
+        model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.7,
         max_tokens=400,
@@ -199,9 +199,9 @@ def run_campaign():
         if success:
             mark_sent(leads, original_index)
             sent_count += 1
-            logging.info(f"✓ Sent to {email}")
+            logging.info(f"[OK] Sent to {email}")
         else:
-            logging.warning(f"✗ Failed for {email}")
+            logging.warning(f"[FAIL] Failed for {email}")
 
         if i < len(batch) - 1:
             time.sleep(DELAY_SECONDS)
