@@ -1,15 +1,15 @@
-"""
-enrich_leads.py — SkipHR Enrichment Engine
+﻿"""
+enrich_leads.py - SkipHR Enrichment Engine
 ==========================================
 Takes leads.csv (from find_leads.py) and enriches each row with:
 
-  1. FOUNDER NAME     — Scraped from company website About/Team page
+  1. FOUNDER NAME     - Scraped from company website About/Team page
                         + DuckDuckGo search snippet for LinkedIn
-  2. REAL EMAIL       — Scraped from website contact/about pages (mailto + regex)
-  3. EMAIL PATTERNS   — Generated from name + domain (firstname@, f.lastname@, etc.)
-  4. EMAIL VALIDATION — MX record check (confirms domain accepts email)
+  2. REAL EMAIL       - Scraped from website contact/about pages (mailto + regex)
+  3. EMAIL PATTERNS   - Generated from name + domain (firstname@, f.lastname@, etc.)
+  4. EMAIL VALIDATION - MX record check (confirms domain accepts email)
                         + SMTP RCPT check if port 25 is open on your machine
-  5. CONTEXT UPDATE   — Enriches context field with founder title & description
+  5. CONTEXT UPDATE   - Enriches context field with founder title & description
 
 Output: overwrites leads.csv with filled name + email columns
 
@@ -34,7 +34,7 @@ logging.basicConfig(
     handlers=[logging.FileHandler("enricher.log"), logging.StreamHandler()]
 )
 
-# ─── CONFIG ───────────────────────────────────────────────────────────────────
+# --- CONFIG -------------------------------------------------------------------
 
 LEADS_FILE      = os.getenv("LEADS_FILE", "leads.csv")
 REQUEST_TIMEOUT = int(os.getenv("ENRICH_TIMEOUT", "8"))
@@ -65,13 +65,13 @@ CONTACT_PATHS = [
 ]
 
 # Name patterns from About/Team pages
-NAME_RE = re.compile(r'\b([A-Z][a-záéíóúñ\-]+\s+[A-Z][a-záéíóúñ\-]+(?:\s+[A-Z][a-záéíóúñ\-]+)?)\b')
+NAME_RE = re.compile(r'\b([A-Z][a-z------\-]+\s+[A-Z][a-z------\-]+(?:\s+[A-Z][a-z------\-]+)?)\b')
 FOUNDER_TITLE_RE = re.compile(
     r'(founder|co-founder|ceo|chief executive|cto|chief technology|president|'
     r'md|managing director|director)', re.I
 )
 
-# ─── HTTP HELPER ──────────────────────────────────────────────────────────────
+# --- HTTP HELPER --------------------------------------------------------------
 
 import random
 
@@ -87,7 +87,7 @@ def get(url: str, timeout: int = REQUEST_TIMEOUT) -> requests.Response | None:
         return None
 
 
-# ─── 1. WEBSITE EMAIL SCRAPER ─────────────────────────────────────────────────
+# --- 1. WEBSITE EMAIL SCRAPER -------------------------------------------------
 
 def scrape_website(base_url: str) -> dict:
     """
@@ -105,7 +105,7 @@ def scrape_website(base_url: str) -> dict:
         result["pages_hit"] += 1
         soup = BeautifulSoup(resp.text, "html.parser")
 
-        # ── Extract emails ──────────────────────────────────────────
+        # -- Extract emails ------------------------------------------
         # mailto: links (most reliable)
         for a in soup.find_all("a", href=True):
             href = a["href"]
@@ -123,7 +123,7 @@ def scrape_website(base_url: str) -> dict:
 
         seen_text.append(page_text)
 
-        # ── Extract founder names from About/Team pages ─────────────
+        # -- Extract founder names from About/Team pages -------------
         if path in ("/about", "/about-us", "/team", "/people", "/founders", ""):
             _extract_founder_names(soup, page_text, result)
 
@@ -155,7 +155,7 @@ def _extract_founder_names(soup: BeautifulSoup, text: str, result: dict):
     """
     found = []
 
-    # 1. Structured data (JSON-LD) — most reliable when present
+    # 1. Structured data (JSON-LD) - most reliable when present
     for script in soup.find_all("script", type="application/ld+json"):
         try:
             data = json.loads(script.string or "")
@@ -177,8 +177,8 @@ def _extract_founder_names(soup: BeautifulSoup, text: str, result: dict):
     # 2. OG / meta tags
     og_title = soup.find("meta", property="og:title")
     if og_title and og_title.get("content"):
-        # Sometimes: "Company — John Doe, CEO"
-        m = re.search(r'—\s*([A-Z][a-z]+\s+[A-Z][a-z]+)', og_title["content"])
+        # Sometimes: "Company - John Doe, CEO"
+        m = re.search(r'-\s*([A-Z][a-z]+\s+[A-Z][a-z]+)', og_title["content"])
         if m:
             found.append(m.group(1))
 
@@ -199,7 +199,7 @@ def _extract_founder_names(soup: BeautifulSoup, text: str, result: dict):
     # 4. Sliding window in text: "John Doe, CEO" or "CEO John Doe"
     windows = re.findall(
         r'([A-Z][a-z]+ [A-Z][a-z]+(?:\s[A-Z][a-z]+)?)'  # Name
-        r'[\s,–\-]*'
+        r'[\s,-\-]*'
         r'(?:co-?founder|founder|ceo|chief executive|president|md)',
         text, re.I
     )
@@ -207,7 +207,7 @@ def _extract_founder_names(soup: BeautifulSoup, text: str, result: dict):
 
     windows2 = re.findall(
         r'(?:co-?founder|founder|ceo|chief executive|president|md)'
-        r'[\s,–\-]*'
+        r'[\s,-\-]*'
         r'([A-Z][a-z]+ [A-Z][a-z]+(?:\s[A-Z][a-z]+)?)',
         text, re.I
     )
@@ -227,11 +227,11 @@ def _extract_founder_names(soup: BeautifulSoup, text: str, result: dict):
     result["founder_names"].extend(clean[:3])
 
 
-# ─── 2. DUCKDUCKGO SEARCH ─────────────────────────────────────────────────────
+# --- 2. DUCKDUCKGO SEARCH -----------------------------------------------------
 
 def search_founder_name(company_name: str, website: str) -> str | None:
     """
-    DuckDuckGo HTML search for '[Company] founder CEO' → extracts name from snippets.
+    DuckDuckGo HTML search for '[Company] founder CEO' - extracts name from snippets.
     Falls back to None if blocked or no result.
     """
     query = f'"{company_name}" founder CEO site:linkedin.com'
@@ -252,7 +252,7 @@ def search_founder_name(company_name: str, website: str) -> str | None:
         for el in soup.select(sel)[:8]:
             text = el.get_text(" ", strip=True)
             # LinkedIn format: "FirstName LastName - Founder at Company | LinkedIn"
-            m = re.match(r'^([A-Z][a-záéíóú\-]+ [A-Z][a-záéíóú\-]+(?:\s[A-Z][a-záéíóú\-]+)?)\s*[-–|]', text)
+            m = re.match(r'^([A-Z][a-z-----\-]+ [A-Z][a-z-----\-]+(?:\s[A-Z][a-z-----\-]+)?)\s*[--|]', text)
             if m:
                 return m.group(1)
             # Snippet format: "...CEO John Doe founded..."
@@ -266,7 +266,7 @@ def search_founder_name(company_name: str, website: str) -> str | None:
     return None
 
 
-# ─── 3. EMAIL PATTERN GENERATOR ───────────────────────────────────────────────
+# --- 3. EMAIL PATTERN GENERATOR -----------------------------------------------
 
 def generate_email_patterns(first: str, last: str, domain: str) -> list[tuple[str, int]]:
     """
@@ -301,7 +301,7 @@ def generate_email_patterns(first: str, last: str, domain: str) -> list[tuple[st
     return sorted(patterns, key=lambda x: x[1], reverse=True)
 
 
-# ─── 4. EMAIL VALIDATOR ───────────────────────────────────────────────────────
+# --- 4. EMAIL VALIDATOR -------------------------------------------------------
 
 _mx_cache = {}
 
@@ -359,7 +359,7 @@ def validate_email_quick(email: str) -> str:
     return "domain_ok" if mx else "no_mx"
 
 
-# ─── 5. MAIN ENRICHER ─────────────────────────────────────────────────────────
+# --- 5. MAIN ENRICHER ---------------------------------------------------------
 
 def enrich_lead(lead: dict) -> dict:
     """
@@ -382,12 +382,12 @@ def enrich_lead(lead: dict) -> dict:
 
     logging.info(f"Enriching: {company} ({domain})")
 
-    # ── Step 1: Scrape website ──────────────────────────────────────
+    # -- Step 1: Scrape website --------------------------------------
     scraped = scrape_website(website)
     found_emails  = scraped["emails"]
     found_names   = scraped["founder_names"]
 
-    # ── Step 2: Find founder name if still unknown ──────────────────
+    # -- Step 2: Find founder name if still unknown ------------------
     best_name = current_name
     if not best_name or best_name in ("Founder", "Hiring Manager"):
         if found_names:
@@ -401,7 +401,7 @@ def enrich_lead(lead: dict) -> dict:
 
     lead["name"] = best_name or current_name
 
-    # ── Step 3: Choose best email ───────────────────────────────────
+    # -- Step 3: Choose best email -----------------------------------
     name_parts = best_name.split() if best_name and best_name not in ("Founder","Hiring Manager") else []
     first = name_parts[0] if name_parts else ""
     last  = name_parts[1] if len(name_parts) > 1 else ""
@@ -424,7 +424,7 @@ def enrich_lead(lead: dict) -> dict:
         patterns = generate_email_patterns(first, last, domain)
         best_email = patterns[0][0] if patterns else f"founders@{domain}"
 
-    # ── Step 4: Validate email ──────────────────────────────────────
+    # -- Step 4: Validate email --------------------------------------
     if SMTP_VERIFY:
         valid_status = validate_email_smtp(best_email)
     else:
@@ -444,11 +444,11 @@ def enrich_lead(lead: dict) -> dict:
     if extra:
         lead["context"] = lead.get("context","") + " | " + " | ".join(extra)
 
-    logging.info(f"  → Name: {lead['name']} | Email: {best_email} | Status: {valid_status}")
+    logging.info(f"  - Name: {lead['name']} | Email: {best_email} | Status: {valid_status}")
     return lead
 
 
-# ─── 6. BATCH RUNNER ──────────────────────────────────────────────────────────
+# --- 6. BATCH RUNNER ----------------------------------------------------------
 
 def load_leads() -> list[dict]:
     if not os.path.exists(LEADS_FILE):
@@ -506,7 +506,7 @@ def main():
 
     logging.info(f"Enriching {len(to_enrich)} leads...")
     print(f"\n{'='*60}")
-    print(f"  ENRICHER — processing {len(to_enrich)} leads")
+    print(f"  ENRICHER - processing {len(to_enrich)} leads")
     print(f"{'='*60}\n")
 
     done = 0
@@ -533,8 +533,8 @@ def main():
     print(f"  Done: {done} enriched, {errors} errors")
     print(f"  Saved to: {LEADS_FILE}")
     print(f"\n  Ready to send? Run:")
-    print(f"    python mailer.py --dry-run   ← preview")
-    print(f"    python mailer.py --now       ← send")
+    print(f"    python mailer.py --dry-run   - preview")
+    print(f"    python mailer.py --now       - send")
     print(f"{'='*60}\n")
 
 

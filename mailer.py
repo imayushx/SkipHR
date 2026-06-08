@@ -161,16 +161,17 @@ def mark_sent(leads: list[dict], index: int):
     """Update a lead row as sent with timestamp."""
     leads[index]["sent"] = "YES"
     leads[index]["sent_at"] = datetime.now().strftime("%Y-%m-%d %H:%M")
-    fieldnames = leads[0].keys()
+    # Strip any None keys introduced by trailing commas in CSV header
+    fieldnames = [k for k in leads[0].keys() if k is not None]
     with open(LEADS_FILE, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(leads)
 
 
 # ─── MAIN CAMPAIGN RUNNER ─────────────────────────────────────────────────────
 
-def run_campaign():
+def run_campaign(to_filter=None):
     logging.info("=" * 50)
     logging.info("Campaign started")
 
@@ -180,6 +181,8 @@ def run_campaign():
 
     # Only pick leads not yet sent
     pending = [(i, lead) for i, lead in enumerate(leads) if lead.get("sent", "").upper() != "YES"]
+    if to_filter:
+        pending = [(i, lead) for i, lead in pending if lead.get("email", "").lower() == to_filter.lower()]
 
     if not pending:
         logging.info("No pending leads. Add more to leads.csv.")
@@ -229,11 +232,18 @@ def run_campaign():
 if __name__ == "__main__":
     import sys
 
+    # --to email@address.com  filters to a single recipient
+    to_filter = None
+    if "--to" in sys.argv:
+        to_filter = sys.argv[sys.argv.index("--to") + 1]
+
     if "--dry-run" in sys.argv:
         # Print what would be sent without actually sending
         logging.info("DRY RUN MODE — no emails will be sent")
         leads = load_leads()
         pending = [(i, lead) for i, lead in enumerate(leads) if lead.get("sent", "").upper() != "YES"]
+        if to_filter:
+            pending = [(i, lead) for i, lead in pending if lead.get("email", "").lower() == to_filter.lower()]
         batch = pending[:DAILY_LIMIT]
         for i, (_, lead) in enumerate(batch):
             print(f"\n{'='*50}")
@@ -250,8 +260,7 @@ if __name__ == "__main__":
         print(f"Would send {len(batch)} emails.")
 
     elif "--now" in sys.argv:
-        # Run immediately
-        run_campaign()
+        run_campaign(to_filter=to_filter)
     else:
         # Schedule daily at 9:00 AM
         schedule.every().day.at("09:00").do(run_campaign)

@@ -1,12 +1,12 @@
-"""
-SkipHR LeadFinder — Automated Startup Lead Discovery
+﻿"""
+SkipHR LeadFinder --- Automated Startup Lead Discovery
 ----------------------------------------------
 Sources (all FREE, no API keys needed):
-  1. YC OSS API       — 5,800+ YC startups, tags, hiring status
-  2. Hacker News Jobs — "Who is Hiring?" threads (monthly)
-  3. Email guesser    — Pattern-based email generation from domain + name
+  1. YC OSS API       --- 5,800+ YC startups, tags, hiring status
+  2. Hacker News Jobs --- "Who is Hiring?" threads (monthly)
+  3. Email guesser    --- Pattern-based email generation from domain + name
 
-Output: leads.csv — ready to drop into mailer.py
+Output: leads.csv --- ready to drop into mailer.py
 
 Usage:
   python find_leads.py              # Interactive mode
@@ -28,7 +28,7 @@ logging.basicConfig(
     handlers=[logging.FileHandler("finder.log"), logging.StreamHandler()]
 )
 
-# ─── CONFIG ───────────────────────────────────────────────────────────────────
+# --------- CONFIG ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 OUTPUT_FILE = os.getenv("LEADS_FILE", "leads.csv")
 
@@ -60,7 +60,7 @@ MAX_LEADS = int(os.getenv("MAX_LEADS", "200"))
 # YC data source
 YC_API_URL = "https://raw.githubusercontent.com/yc-oss/api/gh-pages/companies/all.json"
 
-# ─── HELPERS ──────────────────────────────────────────────────────────────────
+# --------- HELPERS ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def fetch_json(url: str, timeout: int = 20) -> dict | list | None:
     try:
@@ -121,7 +121,7 @@ def append_leads(leads: list[dict]):
             writer.writerow({k: lead.get(k, "") for k in fieldnames})
 
 
-# ─── SOURCE 1: YC Companies ───────────────────────────────────────────────────
+# --------- SOURCE 1: YC Companies ---------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def fetch_yc_leads() -> list[dict]:
     logging.info("Fetching YC company database...")
@@ -162,7 +162,7 @@ def fetch_yc_leads() -> list[dict]:
         one_liner = c.get("one_liner", "")
         tag_str = ", ".join(list(tags)[:4])
 
-        # Generate a plausible founder email (best guess — primary email to try)
+        # Generate a plausible founder email (best guess --- primary email to try)
         guessed_email = f"founder@{domain}"
 
         # Deduplicate
@@ -175,7 +175,7 @@ def fetch_yc_leads() -> list[dict]:
             "company": name,
             "role":    "Founder / CEO",
             "website": website,
-            "context": f"YC {batch} — {one_liner[:120]}",
+            "context": f"YC {batch} --- {one_liner[:120]}",
             "source":  "YC",
             "tags":    tag_str,
             "sent":    "",
@@ -189,7 +189,7 @@ def fetch_yc_leads() -> list[dict]:
     return leads
 
 
-# ─── SOURCE 2: Hacker News "Who is Hiring?" ───────────────────────────────────
+# --------- SOURCE 2: Hacker News "Who is Hiring?" ---------------------------------------------------------------------------------------------------------
 
 def fetch_hn_jobs() -> list[dict]:
     """
@@ -270,7 +270,7 @@ def fetch_hn_jobs() -> list[dict]:
             "company": company_line,
             "role":    "Hiring",
             "website": website,
-            "context": f"HN Who's Hiring — score {score}/10 — {text[:150].strip()}...",
+            "context": f"HN Who's Hiring --- score {score}/10 --- {text[:150].strip()}...",
             "source":  "HN",
             "tags":    "",
             "sent":    "",
@@ -281,7 +281,7 @@ def fetch_hn_jobs() -> list[dict]:
     return leads
 
 
-# ─── SOURCE 3: Email enrichment from domain (pattern guessing) ────────────────
+# --------- SOURCE 3: Email enrichment from domain (pattern guessing) ------------------------------------------------
 
 def enrich_emails_for_leads(leads: list[dict]) -> list[dict]:
     """
@@ -302,11 +302,11 @@ def enrich_emails_for_leads(leads: list[dict]) -> list[dict]:
     return enriched
 
 
-# ─── REPORT PRINTER ───────────────────────────────────────────────────────────
+# --------- REPORT PRINTER ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def print_summary(leads: list[dict]):
     print("\n" + "="*65)
-    print(f"  LEADFINDER RESULTS — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    print(f"  LEADFINDER RESULTS --- {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     print("="*65)
 
     sources = {}
@@ -315,20 +315,20 @@ def print_summary(leads: list[dict]):
         sources[s] = sources.get(s, 0) + 1
 
     for src, count in sources.items():
-        print(f"  {src:15} → {count} leads")
-    print(f"  {'TOTAL':15} → {len(leads)} leads")
+        print(f"  {src:15} --- {count} leads")
+    print(f"  {'TOTAL':15} --- {len(leads)} leads")
     print(f"\n  Saved to: {OUTPUT_FILE}")
     print("="*65)
     print()
     print("  Next steps:")
-    print("  1. Open leads.csv — review and fill in real founder names")
+    print("  1. Open leads.csv --- review and fill in real founder names")
     print("  2. Use Hunter.io (free) to verify emails for top targets")
-    print("  3. Run: python mailer.py --dry-run  ← preview emails")
-    print("  4. Run: python mailer.py --now       ← send campaign")
+    print("  3. Run: python mailer.py --dry-run  --- preview emails")
+    print("  4. Run: python mailer.py --now       --- send campaign")
     print()
 
 
-# ─── MAIN ─────────────────────────────────────────────────────────────────────
+# --------- MAIN ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def main():
     args = sys.argv[1:]
