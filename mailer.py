@@ -100,8 +100,17 @@ The "body" value must use actual newline characters (\\n) for line breaks — es
     raw = re.sub(r"^```(?:json)?\s*", "", raw)
     raw = re.sub(r"\s*```$", "", raw)
     raw = raw.strip()
-    # Parse — Groq properly escapes \n inside JSON strings
-    result = json.loads(raw)
+    # Replace literal newlines inside JSON string values with \n escape
+    # (models sometimes emit unescaped newlines inside JSON strings)
+    raw = re.sub(r'(?<="):([^"]*)\n([^"]*?)(?=")', lambda m: m.group(0).replace('\n', '\\n'), raw)
+    try:
+        result = json.loads(raw)
+    except json.JSONDecodeError:
+        # Fallback: extract subject and body with regex if JSON is malformed
+        subject = re.search(r'"subject"\s*:\s*"([^"]+)"', raw)
+        body = re.search(r'"body"\s*:\s*"([\s\S]+?)"\s*\}', raw)
+        assert subject and body, f"Could not parse AI response: {raw[:200]}"
+        result = {"subject": subject.group(1), "body": body.group(1).replace('\\n', '\n')}
     assert "subject" in result and "body" in result, "AI response missing subject or body"
     return result
 
